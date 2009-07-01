@@ -1,33 +1,36 @@
 -module (stomp).
 -export ([connect/4]).
+-export ([disconnect/1]).
+-export ([subscribe/2]).
+-export ([unsubscribe/2]).
+
 
 
 %% stomp:connect("localhost", 61613, "", "").
 
 connect (Host, PortNo, Login, Passcode)  ->
-	io:format("HOST:~w~nLOGIN:~w~nPASSCODE:~w~n", [Host, Login, Passcode]),
-	Connect="CONNECT",
-	Message=lists:append([Connect, "\nlogin: ", Login, "\npasscode: ", Passcode, "\n\n", [0]]),
+	Message=lists:append(["CONNECT", "\nlogin: ", Login, "\npasscode: ", Passcode, "\n\n", [0]]),
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
-	io:format("Socket=~p~n",[Sock]),
 	gen_tcp:send(Sock,Message),
-	A=gen_tcp:recv(Sock, 0),
-	io:format("~w",[A]),
-	gen_tcp:close(Sock).
+	{ok, Response}=gen_tcp:recv(Sock, 0),
+	io:format("~s",[Response]),
+	Sock.
 
 
-	do_recv(Sock, Bs) ->
-	    case gen_tcp:recv(Sock, 0) of
-	        {ok, B} ->
-	            do_recv(Sock, [Bs, B]);
-	        {error, closed} ->
-	            {ok, list_to_binary(Bs)}
-	    end.
-
-wait_reply(X) ->
-	receive
-		Reply ->
-			{value, Reply}
-			after 1000 ->
-				timeout
-			end.
+subscribe (Destination, Connection) ->
+	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.
+	
+	
+unsubscribe (Destination, Connection) ->
+	Message=lists:append(["UNSUBSCRIBE", "\ndestination: ", Destination, "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.	
+	
+	
+disconnect (Connection) ->
+	Message=lists:append(["DISCONNECT", "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	gen_tcp:close(Connection),
+	ok.	
