@@ -2,7 +2,10 @@
 -export ([connect/4]).
 -export ([disconnect/1]).
 -export ([subscribe/2]).
+-export ([subscribe/3]).
 -export ([unsubscribe/2]).
+-export ([get_message/1]).
+
 
 
 
@@ -13,12 +16,14 @@ connect (Host, PortNo, Login, Passcode)  ->
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
 	gen_tcp:send(Sock,Message),
 	{ok, Response}=gen_tcp:recv(Sock, 0),
-	io:format("~s",[Response]),
 	Sock.
 
-
 subscribe (Destination, Connection) ->
-	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, "\n\n", [0]]),
+	subscribe (Destination, Connection, "auto"),
+	ok.
+
+subscribe (Destination, Connection, Ack) ->
+	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, "\nack: ", Ack,"\n\n", [0]]),
 	gen_tcp:send(Connection,Message),
 	ok.
 	
@@ -34,3 +39,8 @@ disconnect (Connection) ->
 	gen_tcp:send(Connection,Message),
 	gen_tcp:close(Connection),
 	ok.	
+
+get_message (Connection) ->
+	{ok, Response}=gen_tcp:recv(Connection, 0),
+	io:format("~s", [Response]),
+	Response.
