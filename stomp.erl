@@ -53,9 +53,11 @@ disconnect (Connection) ->
 get_messages (Connection) ->
 	{ok, Response}=gen_tcp:recv(Connection, 0),
 	io:format("~s", [Response]),
-	Type=get_type(Response),
-%%	Headers=get_headers(nthtail(length(Type) + 1, Response)),
-	io:fwrite("~s", [Type]),
+	[Type, {Headers, MessageBody}]=get_type(Response),
+	io:fwrite("Type: ~s", [Type]),
+	io:fwrite("~nHeaders:~n~s", [Headers]),
+	io:fwrite("~nMessageBody:~n~s", [MessageBody]),
+	
 		[].
 
 %% PRIVATE METHODS . . .	
@@ -77,12 +79,32 @@ get_type ([], Type) ->
 		Type;
 get_type ([H|T], Type) ->	
 		case (H) of
-			10 -> Type;
+			10 -> [Type, get_headers(T)];
 			_ -> get_type(T, lists:append([Type, [H]]))	
 		end.
 		
-%% extract headers . . . 
-%%get_headers ([H|T], Headers, LastChar) ->
-%%	case ({H, LastChar}) of
-%%			{10, 10} -> Headers,
+%% extract headers as a blob of chars, after having iterated over . . .
+
+get_headers (Message) ->
+%	io:fwrite("~s", ["in get_headers"]),
+	get_headers (Message, []).
 	
+get_headers (Message, Headers) ->
+%	io:fwrite("~s", ["in get_headers 2"]),
+	get_headers (Message, Headers, -1).
+		
+get_headers ([H|T], Headers, LastChar) ->
+	case ({H, LastChar}) of
+		{10, 10} -> {Headers, get_message_body(T)};
+		{_, _} -> get_headers(T, lists:append([Headers, [H]]), H)
+	end.
+	
+%% extract message body
+get_message_body ([H|T]) ->
+	get_message_body ([H|T], []).
+	
+get_message_body ([H|T], MessageBody) ->
+	case(H) of
+		0 -> MessageBody;
+		_ -> lists:append([MessageBody, [H], get_message_body(T, MessageBody)])
+	end.	
