@@ -53,10 +53,12 @@ disconnect (Connection) ->
 get_messages (Connection) ->
 	{ok, Response}=gen_tcp:recv(Connection, 0),
 	io:format("~s", [Response]),
-	[Type, {Headers, MessageBody}]=get_type(Response),
+	[{type, Type}, {headers, Headers}, {body, MessageBody}]=get_message(Response),
 	io:fwrite("Type: ~s", [Type]),
 	io:fwrite("~nHeaders:~n~s", [Headers]),
 	io:fwrite("~nMessageBody:~n~s", [MessageBody]),
+	header_clob_to_tuple_list(Headers),
+	
 	
 		[].
 
@@ -69,6 +71,11 @@ concatenate_options ([H|T]) ->
 
 
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
+get_message(Message) ->
+ 	[Type, {Headers, MessageBody}]=get_type(Message), %% Ugly . . .
+	[{type, Type}, {headers, Headers}, {body, MessageBody}].
+
+
 
 %% extract type ("MESSAGE", "CONNECT", etc.) from message string . . .	
 
@@ -86,11 +93,9 @@ get_type ([H|T], Type) ->
 %% extract headers as a blob of chars, after having iterated over . . .
 
 get_headers (Message) ->
-%	io:fwrite("~s", ["in get_headers"]),
 	get_headers (Message, []).
 	
 get_headers (Message, Headers) ->
-%	io:fwrite("~s", ["in get_headers 2"]),
 	get_headers (Message, Headers, -1).
 		
 get_headers ([H|T], Headers, LastChar) ->
@@ -108,3 +113,31 @@ get_message_body ([H|T], MessageBody) ->
 		0 -> MessageBody;
 		_ -> lists:append([MessageBody, [H], get_message_body(T, MessageBody)])
 	end.	
+
+
+%% parse header clob into list of tuples . . .
+header_clob_to_tuple_list ([]) ->
+	[];
+header_clob_to_tuple_list ([H|T]) ->
+	
+
+	
+	Header=get_header_name(lists:append([H],T)),
+	Rev=lists:reverse([Header]),
+	io:fwrite("Header: ~w", lists:reverse(Rev)).
+	
+get_header_name ([H|T]) ->
+	io:fwrite("In get_header_name: ~c~n", [H]),
+		case (H) of 
+			58 ->  {header_value, get_header_value(T)};
+			_ -> lists:append([[H], get_header_name(T)])
+		end.
+	
+get_header_value ([H|T]) ->
+		io:fwrite("In get_header_value: ~c~n", [H]),
+		
+		case (H) of 
+			10 -> {remaining_headers, T};
+			_ -> lists:append([[H], get_header_value(T)])
+			end.	
+		
