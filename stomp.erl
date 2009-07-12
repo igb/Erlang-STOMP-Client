@@ -26,6 +26,8 @@ subscribe (Destination, Connection) ->
 	ok.
 
 %%  Example: stomp:subscribe("/queue/foobar", Conn, [{"ack", "client"}]).
+%%  Example: stomp:subscribe("/queue/foobar", Conn, [{"ack", "client"}, {"activemq.prefetchSize", 1}]).
+
 
 subscribe (Destination, Connection, Options) ->
 	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, concatenate_options(Options),"\n\n", [0]]),
@@ -57,8 +59,7 @@ get_messages (Connection) ->
 	io:fwrite("Type: ~s", [Type]),
 	io:fwrite("~nHeaders:~n~s", [Headers]),
 	io:fwrite("~nMessageBody:~n~s", [MessageBody]),
-	header_clob_to_tuple_list(Headers),
-	
+	get_headers_from_raw_src([], Headers),
 	
 		[].
 
@@ -71,6 +72,7 @@ concatenate_options ([H|T]) ->
 
 
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
+% 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src
 get_message(Message) ->
  	[Type, {Headers, MessageBody}]=get_type(Message), %% Ugly . . .
 	[{type, Type}, {headers, Headers}, {body, MessageBody}].
@@ -116,28 +118,31 @@ get_message_body ([H|T], MessageBody) ->
 
 
 %% parse header clob into list of tuples . . .
-header_clob_to_tuple_list ([]) ->
-	[];
-header_clob_to_tuple_list ([H|T]) ->
-	
+get_headers_from_raw_src (Headers, []) ->
+	{Headers, []};
+get_headers_from_raw_src(Headers, RawSrc) ->
+	{Header, RestOfList}=get_header(RawSrc),
+	get_headers_from_raw_src(lists:append([Headers, [Header]]), RestOfList).
 
+get_header (RawSrc) ->
+	{HeaderName, RestOfListAfterHeaderExtraction}=get_header_name([], RawSrc),
+	{HeaderValue, RestOfListAfterValueExtraction}=get_header_value([], RestOfListAfterHeaderExtraction),
+	io:fwrite("Header: ~s,~s~n", [HeaderName, HeaderValue]),
+	{{HeaderName, HeaderValue}, RestOfListAfterValueExtraction}.
 	
-	Header=get_header_name(lists:append([H],T)),
-	Rev=lists:reverse([Header]),
-	io:fwrite("Header: ~w", lists:reverse(Rev)).
 	
-get_header_name ([H|T]) ->
-	io:fwrite("In get_header_name: ~c~n", [H]),
+get_header_name (HeaderName, [H|T]) ->
+	%%io:fwrite("In get_header_name: ~c~n", [H]),
 		case (H) of 
-			58 ->  {header_value, get_header_value(T)};
-			_ -> lists:append([[H], get_header_name(T)])
+			58 ->  {HeaderName, T};
+			_ -> get_header_name(lists:append([HeaderName, [H]]), T)
 		end.
 	
-get_header_value ([H|T]) ->
-		io:fwrite("In get_header_value: ~c~n", [H]),
+get_header_value (HeaderValue, [H|T]) ->
+	%%	io:fwrite("In get_header_value: ~c~n", [H]),
 		
 		case (H) of 
-			10 -> {remaining_headers, T};
-			_ -> lists:append([[H], get_header_value(T)])
+			10 -> {HeaderValue, T};
+			_ -> get_header_value(lists:append([HeaderValue, [H]]), T)
 			end.	
 		
