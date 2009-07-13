@@ -7,6 +7,8 @@
 -export ([get_messages/1]).
 -export ([get_message_id/1]).
 -export ([ack/2]).
+-export ([send/4]).
+
 
 
 
@@ -54,7 +56,7 @@ disconnect (Connection) ->
 	gen_tcp:close(Connection),
 	ok.	
 
-%% Example: stomp:get_message_id(CMessage).
+%% Example: stomp:get_message_id(Message).
 
 get_message_id ([_, {headers, Headers}, _]) ->
 	get_message_id (Headers);
@@ -67,14 +69,26 @@ get_message_id ([])	->
 	throw("No header with name of 'message-id' was found.").
 	
 	
+	
+	
+	
+%% Example: stomp:ack(Conn, Message).
+%% Example: stomp:ack(Conn, stomp:get_message_id(Message)).
+%% Example: stomp:ack(Conn, "ID:phosphorus-63844-1247442885553-3:1:1:1:1").
+
 ack (Connection, [Type, Headers, Body]) ->
 	MessageId=get_message_id([Type, Headers, Body]),
 	ack(Connection, MessageId);
 ack (Connection, MessageId)	->
 	AckMessage=lists:append(["ACK", "\nmessage-id: ", MessageId, "\n\n", [0]]),
-	gen_tcp:send(Connection,AckMessage).
+	gen_tcp:send(Connection,AckMessage),
+	ok.
 	
-	
+send (Connection, Destination, Headers, MessageBody) ->
+	Message=lists:append(["SEND", "\ndestination: ", Destination, concatenate_options(Headers), "\n\n", MessageBody, [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.
+		
 		
 	
 	
