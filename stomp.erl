@@ -5,6 +5,10 @@
 -export ([subscribe/3]).
 -export ([unsubscribe/2]).
 -export ([get_messages/1]).
+-export ([get_message_id/1]).
+-export ([ack/2]).
+
+
 
 
 
@@ -50,18 +54,42 @@ disconnect (Connection) ->
 	gen_tcp:close(Connection),
 	ok.	
 
+%% Example: stomp:get_message_id(CMessage).
+
+get_message_id ([_, {headers, Headers}, _]) ->
+	get_message_id (Headers);
+get_message_id ([H|T]) ->
+	case (H) of
+		{"message-id", MessageId}->MessageId;
+		_ -> get_message_id(T)
+	end;
+get_message_id ([])	->
+	throw("No header with name of 'message-id' was found.").
+	
+	
+ack (Connection, [Type, Headers, Body]) ->
+	MessageId=get_message_id([Type, Headers, Body]),
+	ack(Connection, MessageId);
+ack (Connection, MessageId)	->
+	AckMessage=lists:append(["ACK", "\nmessage-id: ", MessageId, "\n\n", [0]]),
+	gen_tcp:send(Connection,AckMessage).
+	
+	
+		
+	
+	
+
 %% Example: stomp:get_messages(Conn).
 
 get_messages (Connection) ->
 	{ok, Response}=gen_tcp:recv(Connection, 0),
 	io:format("~s", [Response]),
-	[{type, Type}, {headers, Headers}, {body, MessageBody}]=get_message(Response),
-	io:fwrite("Type: ~s", [Type]),
-	io:fwrite("~nHeaders:~n~s", [Headers]),
-	io:fwrite("~nMessageBody:~n~s", [MessageBody]),
-	get_headers_from_raw_src([], Headers),
+	[{type, Type}, {headers, Headers}, {body, MessageBody}]=get_message(Response).
 	
-		[].
+	%%io:fwrite("Type: ~s", [Type]),
+	%%io:fwrite("~nHeaders:~n~s", [Headers]),
+	%%io:fwrite("~nMessageBody:~n~s", [MessageBody]),
+
 
 %% PRIVATE METHODS . . .	
 concatenate_options ([]) ->
@@ -72,10 +100,11 @@ concatenate_options ([H|T]) ->
 
 
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
-% 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src
+% 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src . . . currently scanning header block multiple times and making unnecessary copies
 get_message(Message) ->
  	[Type, {Headers, MessageBody}]=get_type(Message), %% Ugly . . .
-	[{type, Type}, {headers, Headers}, {body, MessageBody}].
+	{ParsedHeaders, _}=get_headers_from_raw_src([], Headers),
+	[{type, Type}, {headers, ParsedHeaders}, {body, MessageBody}].
 
 
 
