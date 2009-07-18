@@ -16,7 +16,12 @@ connect (Host, PortNo, Login, Passcode)  ->
 	Message=lists:append(["CONNECT", "\nlogin: ", Login, "\npasscode: ", Passcode, "\n\n", [0]]),
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
 	gen_tcp:send(Sock,Message),
-	{ok, _}=gen_tcp:recv(Sock, 0), %%TODO: handle errors/throw exception on error . . . 
+	{ok, Response}=gen_tcp:recv(Sock, 0),
+	[{type, Type}, _, _, _]=get_message(Response),
+	case (Type) of 
+		"CONNECTED" -> Sock;
+		_-> throw("Error occured during connection attempt.")
+	end,
 	Sock.
 
 
