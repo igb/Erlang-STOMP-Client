@@ -106,7 +106,12 @@ Now that we have subscribed to the queue "foobar", let's  download those pending
             {"message-id",
              "ID:phosphorus-53442-1247930100064-2:5:-1:1:2"}]},
   {body,"we are specifying priority for this hello world"}]]</pre></p>
-<p><h4>Ack'ing messages.</h4></p>
+<p><h4>Ack'ing messages.</h4>
+When we subscribed to the queue "foobar", you may have noticed that we passed in an optional header of the form	 <i>{"ack", "client"}</i>. This header tells the broker to not count a message as delivered until the client as explicitly acknowledged it's receipt...in fact if you examine the queue contents in the ActiveMQ broker console (<a href="http://localhost:8161/admin/browse.jsp?JMSDestination=foobar">http://localhost:8161/admin/browse.jsp?JMSDestination=foobar</a>), you will see that the two messages we sent are still pending. In order to prevent another subscriber from picking up one of these messages, we will need to send a message acknowledging our receipt. To dod this, use the <i>ack</i> function, which takes a connection and a message id as parameters. The message id for each of the messages we have downloaded is present in the accompanying headers (<i>{"message-id","ID:phosphorus-53442-1247930100064-2:5:-1:1:1"}</i> and <i>{"message-id","ID:phosphorus-53442-1247930100064-2:5:-1:1:2"}</i>). Example:
+<pre> > stomp:ack(Conn, "ID:phosphorus-53442-1247930100064-2:5:-1:1:1").
+ > stomp:ack(Conn, "ID:phosphorus-53442-1247930100064-2:5:-1:1:2").</pre>	 
+	</p>
+<p>Note, now if you check the queue, you will see these messages are no longer present, receipt by our subscriber having been confirmed.</p>	
 
 <p><h4>Transactions.</h4></p>
 <p><h4>on_message</h4></p>
