@@ -1,0 +1,117 @@
+<html>
+<head>
+<title>STOMP Client for Erlang</title>
+<style type="text/css">
+body {
+
+font-family: arial;
+font-size: 10pt;
+
+}
+td {
+
+font-family: arial;
+font-size: 10pt;
+background: ffffff;
+}
+
+
+.footnote {
+
+font-family: arial;
+font-size: 7pt;
+
+}
+
+table {
+background: black;
+
+}
+
+th {
+
+background: ffffff;
+font-family: arial;
+font-size: 10pt;
+font-weight: bold;
+
+}
+tt {
+
+font-family: arial;
+font-size: 8pt;
+
+}
+.footer {
+    font-size: 10;
+    font-weight: bold;
+
+}
+.feed {background: #eeeeff;}
+
+.doc {
+    border: 1px black dashed;
+    padding: 3px;
+    background: dddddd;
+}
+.command {
+    font-style: italic;
+}
+pre {
+    font-family: courier;
+    font-size: 8pt;
+    border-style: dashed;
+    border-color: gray;
+    border-width: 1px;
+}
+
+sup {
+    font-size: 6pt;
+}
+</style>
+
+</head>
+<body>
+<h3>STOMP Client for Erlang</h3>
+
+<p><a href="stomp.erl">stomp.erl</a> is a simple client library for message brokers that support the <a href="http://stomp.codehaus.org/">STOMP</a> <a href="http://stomp.codehaus.org/Protocol">protocol</a>. It's usage is pretty straight forward, and below, I walk through a basic interaction with a broker and go into the public functions in greater detail. These examples will be using <a href="http://activemq.apache.org/">ActiveMQ</a> as the broker. ActiveMQ is a free open source message broker, written in Java, that is pretty easy to install, set up, and run. Go ahead and start up <i>erl</i> in the same directory as <i>stomp.erl</i> and compile the stomp client module. 
+<pre> > c(stomp.erl).</pre></p>
+<p><h4>Opening a connection.</h4>The first thing we are going to do is open a connection to the broker. Underneath this call we will be opening a socket connection to the broker (stomp.erl uses the <a href="http://erlang.org/doc/man/gen_tcp.html">gen_tcp</a> module bundled with Erlang) and  sending some simple protocol messages to set up a session with the broker. As mentioned above, these examples are assuming that ActiveMQ is up and running in your local environment, with the STOMP handler enabled, and listening on the default port (61613).</p><p>The <i>connect</i> function takes four arguments (the broker's hostname or address, the port number, a login, and a passcode for authentication), and returns a Connection that we will be using throughout the subsequent exchanges: 
+	<pre> > Conn = stomp:connect("localhost", 61613, "", "").</pre></p>
+<p>Note that in this instance we do not require any authentication on the broker, and are passing in empty strings for the login and passcode parameters.</p>
+<p><h4>Sending messages.</h4></p>
+<p>Ok, let's send a few messages to a queue (<i>we will use a queue called "foobar" . . . ActiveMQ can create queues and topics "on demand" . . . there is no need to do any explicit administration or configuration, just send a message to the desired destination, and if it does not already exist, the ActiveMQ broker will automatically create it</i>). To send a message, we will need to specify the underlying connection for transmission, the destination queue or topic, any headers we want to send (as a list of tuples), and  the body of the message. Here is a simple example:
+	<pre> > stomp:send(Conn, "/queue/foobar", [], "hello world").
+ > stomp:send(Conn, "/queue/foobar", [{"priority","20"}], "we are specifying priority for this hello world").</pre></p>
+<p>Note that I am using the "priority" header in the example above to illustrate how to specify headers during a send operation. ActiveMQ does not currently re-order messages based on priority, though the header will be passed to the receiving client, so actions/prioritizing can occur within the consuming application.</p>
+<p><h4>Subscribing to a queue or topic.</h4> Before we can recieve messages from the broker, we must register ourselves as a subscriber to a particular queue or topic. To do this, we will pass the connection we instantiated during the first step,  along with a destination (the queue or topic we are interested in), and a list of two-tuples representing the names and values of any optional headers we wish to send:
+	<pre> > stomp:subscribe("/queue/foobar", Conn, [{"ack", "client"}]).</pre></p>
+	<p>We are now subscribed to the queue "foobar", and have told the broker to wait for an ack before removing retrieved messages from the queue.</p>
+<p><h4>Retrieving messages.</h4>
+Now that we have subscribed to the queue "foobar", let's  download those pending messages we sent earlier. To pull messages from a queue or topic, we can use the <i>get_messages</i> function. <i>get_messages</i> takes a connection as it's single argument, will pull down all available messages ("available" means available per broker and subscription policy, and not necessarily all pending messages), blocking if none are available. The return type is a list of messages, each message itself  a list of  3 tuples: type, headers and message body. For example, here is what we get back if we call <i>get_messages</i> after sending the messages from the earlier step:
+<pre> > get_messages(Conn).
+[[{type,"MESSAGE"},
+  {headers,[{"destination","/queue/foobar"},
+            {"timestamp","1247956667243"},
+            {"priority","0"},
+            {"expires","0"},
+            {"message-id",
+             "ID:phosphorus-53442-1247930100064-2:5:-1:1:1"}]},
+  {body,"hello world"}],
+ [{type,"MESSAGE"},
+  {headers,[{"destination","/queue/foobar"},
+            {"timestamp","1247956684233"},
+            {"priority","20"},
+            {"expires","0"},
+            {"message-id",
+             "ID:phosphorus-53442-1247930100064-2:5:-1:1:2"}]},
+  {body,"we are specifying priority for this hello world"}]]</pre></p>
+<p><h4>Ack'ing messages.</h4></p>
+
+<p><h4>Transactions.</h4></p>
+<p><h4>on_message</h4></p>
+<p><h4>Putting it all together.</h4></p>
+
+
+</body>
+</head>				
