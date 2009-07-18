@@ -8,6 +8,7 @@
 -export ([get_message_id/1]).
 -export ([ack/2]).
 -export ([send/4]).
+-export ([on_message/2]).
 
 
 %% Example:	Conn = stomp:connect("localhost", 61613, "", "").
@@ -17,7 +18,7 @@ connect (Host, PortNo, Login, Passcode)  ->
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
 	gen_tcp:send(Sock,Message),
 	{ok, Response}=gen_tcp:recv(Sock, 0),
-	[{type, Type}, _, _, _]=get_message(Response),
+	[{type, Type}, _, _, _]=get_message(Response), %%UGLY!
 	case (Type) of 
 		"CONNECTED" -> Sock;
 		_-> throw("Error occured during connection attempt.")
@@ -113,6 +114,16 @@ get_messages (Connection, Messages, Response) ->
 			get_messages (Connection, lists:append(Messages, [[{type, Type}, {headers, Headers}, {body, MessageBody}]]), T).
 
 
+%% Example: MyFunction=fun([_, _, {_, X}]) -> io:fwrite("message ~s ~n", [X]) end, stomp:on_message(MyFunction, Conn).
+on_message (F, Conn) ->
+	Messages=get_messages(Conn),
+	apply_function_to_messages(F, Messages),
+	on_message(F, Conn).
+
+
+
+	
+
 %% PRIVATE METHODS . . .	
 concatenate_options ([]) ->
 	[];
@@ -120,6 +131,11 @@ concatenate_options ([H|T]) ->
 	{Name, Value}=H,
 	lists:append(["\n", Name, ": ", Value, concatenate_options(T)]).
 
+apply_function_to_messages(_, []) ->
+	ok;
+apply_function_to_messages(F, [H|T]) ->
+	F(H),
+	apply_function_to_messages(F, T).
 
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
 % 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src . . . currently scanning header block multiple times and making unnecessary copies
