@@ -74,7 +74,7 @@ sup {
 <body>
 <h3>STOMP Client for Erlang</h3>
 
-<p><a href="stomp.erl">stomp.erl</a> is a simple client library for message brokers that support the <a href="http://stomp.codehaus.org/">STOMP</a> <a href="http://stomp.codehaus.org/Protocol">protocol</a>. It's usage is pretty straight forward, and below, I walk through a basic interaction with a broker and go into the public functions in greater detail. These examples will be using <a href="http://activemq.apache.org/">ActiveMQ</a> as the broker. ActiveMQ is a free open source message broker, written in Java, that is pretty easy to install, set up, and run. Go ahead and start up <i>erl</i> in the same directory as <i>stomp.erl</i> and compile the stomp client module. 
+<p><a href="/erlang/stomp.erl">stomp.erl</a> is a simple client library for message brokers that support the <a href="http://stomp.codehaus.org/">STOMP</a> <a href="http://stomp.codehaus.org/Protocol">protocol</a>. It's usage is pretty straight forward, and below, I walk through a basic interaction with a broker and go into the public functions in greater detail. These examples will be using <a href="http://activemq.apache.org/">ActiveMQ</a> as the broker. ActiveMQ is a free open source message broker, written in Java, that is pretty easy to install, set up, and run. Go ahead and start up <i>erl</i> in the same directory as <i>stomp.erl</i> and compile the stomp client module. 
 <pre> > c(stomp.erl).</pre></p>
 <p><h4>Opening a connection.</h4>The first thing we are going to do is open a connection to the broker. Underneath this call we will be opening a socket connection to the broker (stomp.erl uses the <a href="http://erlang.org/doc/man/gen_tcp.html">gen_tcp</a> module bundled with Erlang) and  sending some simple protocol messages to set up a session with the broker. As mentioned above, these examples are assuming that ActiveMQ is up and running in your local environment, with the STOMP handler enabled, and listening on the default port (61613).</p><p>The <i>connect</i> function takes four arguments (the broker's hostname or address, the port number, a login, and a passcode for authentication), and returns a Connection that we will be using throughout the subsequent exchanges: 
 	<pre> > Conn = stomp:connect("localhost", 61613, "", "").</pre></p>
@@ -113,10 +113,40 @@ When we subscribed to the queue "foobar", you may have noticed that we passed in
 	</p>
 <p>Note, now if you check the queue, you will see these messages are no longer present, receipt by our subscriber having been confirmed.</p>	
 
-<p><h4>Transactions.</h4></p>
-<p><h4>on_message</h4></p>
-<p><h4>Putting it all together.</h4></p>
+<p><h4>Transactions.</h4>
+STOMP provides transaction semantics for grouping <i>send</i> and <i>ack</i> messages with commit/rollback facilities. The <i>begin_transaction</i>, <i>commit_transaction</i>, and <i>abort_transaction</i> functions provide a means of sending those message types, along with the <i>ack (Connection, MessageId, TransactionId)</i> function and an optional <i>"transaction"</i> header for <i>send</i> operations. Examples:
+<pre> > stomp:begin_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
+ > stomp:send(Conn, "/queue/foobar", [{"transaction", "MyUniqueTransactionIdBlahBlahBlah1234567890"}], "transactional hello world").</pre></p>
+<p>At this point, we have successfully sent a message to the broker, but if we inspect the queue contents in the ActiveMQ broker console (<a href="http://localhost:8161/admin/browse.jsp?JMSDestination=foobar">http://localhost:8161/admin/browse.jsp?JMSDestination=foobar</a>), we will see that there are no pending messages  . . . this is because we sent the last message as part of a transaction that has not been committed yet. To close the transaction, we use the <i>commit_transaction</i> function:
+<pre> > stomp:commit_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
+ > stomp:get_messages(Conn).
+[[{type,"MESSAGE"},
+  {headers,[{"destination","/queue/foobar"},
+            {"transaction",
+             "MyUniqueTransactionIdBlahBlahBlah1234567890"},
+            {"timestamp","1248013136111"},
+            {"priority","0"},
+            {"expires","0"},
+            {"message-id",
+             "ID:phosphorus-53442-1247930100064-2:7:-1:1:5"}]},
+  {body,"transactional hello world"}]]</pre>	
+<p><h4>on_message</h4>
+stomp.erl also provides an "on message" handler, that allows you to pass in a function that will be called on each recieved message. Unlike <i>get_messages</i> it will block <i>continuously</i> (<i>get_messages</i> will return after getting all available messages), waiting for messages to arrive on the queue. Example:
+<pre> > stomp:send(Conn, "/queue/foobar", [], "message one").
+ > stomp:send(Conn, "/queue/foobar", [], "message two").
+ > stomp:send(Conn, "/queue/foobar", [], "message three").	
+ > MyFunction=fun([_, _, {_, X}]) -> io:fwrite("message ~s ~n", [X]) end.
+#Fun&lt;erl_eval.6.13229925>
+ > stomp:on_message(MyFunction, Conn).
+message message one 
+message message two 
+message message three
 
 
+	</pre>
+	 
+</p>
+<p class="footer">
+7/19/2009</p>
 </body>
 </head>				

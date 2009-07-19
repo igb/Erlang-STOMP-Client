@@ -1,5 +1,12 @@
+%% Module for client support of the STOMP messaging protocol (http://stomp.codehaus.org/Protocol). 
+%% Version 0.1
+%% authored by Ian Brown (spam@hccp.org)
+%% documentation can be found at http://www.hccp.org/erlang-stomp-client.html
+%% This was an experiment to get a feel for the Erlang language, and provide simple client access to STOMP suppurting message brokers.  
+%% Please feel free to use and re-distribute as you see fit. Comments. improvements and questions welcome. 
+
 -module (stomp).
--export ([connect/4]).
+-export ([connect/4]). %% "You sunk my scrabbleship!"
 -export ([disconnect/1]).
 -export ([subscribe/2]).
 -export ([subscribe/3]).
@@ -7,7 +14,11 @@
 -export ([get_messages/1]).
 -export ([get_message_id/1]).
 -export ([ack/2]).
+-export ([ack/3]).
 -export ([send/4]).
+-export ([begin_transaction/2]).
+-export ([commit_transaction/2]).
+-export ([abort_transaction/2]).
 -export ([on_message/2]).
 
 
@@ -85,6 +96,20 @@ ack (Connection, MessageId)	->
 	gen_tcp:send(Connection,AckMessage),
 	ok.
 
+
+
+%% Example: stomp:ack(Conn, Message, TransactionId).
+%% Example: stomp:ack(Conn, stomp:get_message_id(Message), TransactionId).
+%% Example: stomp:ack(Conn, "ID:phosphorus-63844-1247442885553-3:1:1:1:1", TransactionId).
+
+ack (Connection, [Type, Headers, Body], TransactionId) ->
+	MessageId=get_message_id([Type, Headers, Body]),
+	ack(Connection, MessageId, TransactionId);
+ack (Connection, MessageId, TransactionId)	->
+	AckMessage=lists:append(["ACK", "\nmessage-id: ", MessageId, "\ntransaction: ", TransactionId, "\n\n", [0]]),
+	gen_tcp:send(Connection,AckMessage),
+	ok.
+
 %% Example: stomp:send(Conn, "/queue/foobar", [], "hello world").
 %% Example: stomp:send(Conn, "/queue/foobar", [{"priority","15"}], "high priority hello world").
 	
@@ -121,8 +146,20 @@ on_message (F, Conn) ->
 	on_message(F, Conn).
 
 
-
+begin_transaction (Connection, TransactionId) ->
+	Message=lists:append(["BEGIN", "\ntransaction: ", TransactionId, "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.
 	
+commit_transaction (Connection, TransactionId) ->
+	Message=lists:append(["COMMIT", "\ntransaction: ", TransactionId, "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.
+		
+abort_transaction (Connection, TransactionId) ->
+	Message=lists:append(["ABORT", "\ntransaction: ", TransactionId, "\n\n", [0]]),
+	gen_tcp:send(Connection,Message),
+	ok.			
 
 %% PRIVATE METHODS . . .	
 concatenate_options ([]) ->
@@ -212,4 +249,6 @@ get_header_value (HeaderValue, [H|T]) ->
 			10 -> {HeaderValue, T};
 			_ -> get_header_value(lists:append([HeaderValue, [H]]), T)
 			end.	
-		
+
+
+
