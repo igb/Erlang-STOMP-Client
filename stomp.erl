@@ -1,9 +1,9 @@
 %% Module for client support of the STOMP messaging protocol (http://stomp.codehaus.org/Protocol). 
 %% Version 0.1
-%% authored by Ian Brown (spam@hccp.org)
-%% documentation can be found at http://www.hccp.org/erlang-stomp-client.html
+%% Authored by Ian Brown (spam@hccp.org)
+%% Documentation can be found at http://www.hccp.org/erlang-stomp-client.html
 %% This was an experiment to get a feel for the Erlang language, and provide simple client access to STOMP suppurting message brokers.  
-%% Please feel free to use and re-distribute as you see fit. Comments. improvements and questions welcome. 
+%% Please feel free to use and re-distribute as you see fit. Comments, improvements and questions welcome. 
 
 -module (stomp).
 -export ([connect/4]). %% "You sunk my scrabbleship!"
@@ -140,22 +140,31 @@ get_messages (Connection, Messages, Response) ->
 
 
 %% Example: MyFunction=fun([_, _, {_, X}]) -> io:fwrite("message ~s ~n", [X]) end, stomp:on_message(MyFunction, Conn).
+
 on_message (F, Conn) ->
 	Messages=get_messages(Conn),
 	apply_function_to_messages(F, Messages),
 	on_message(F, Conn).
 
 
+%% Example: stomp:begin_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
+
 begin_transaction (Connection, TransactionId) ->
 	Message=lists:append(["BEGIN", "\ntransaction: ", TransactionId, "\n\n", [0]]),
 	gen_tcp:send(Connection,Message),
 	ok.
+
+
+%% Example: stomp:commit_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
 	
 commit_transaction (Connection, TransactionId) ->
 	Message=lists:append(["COMMIT", "\ntransaction: ", TransactionId, "\n\n", [0]]),
 	gen_tcp:send(Connection,Message),
 	ok.
 		
+
+%% Example: stomp:abort_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
+
 abort_transaction (Connection, TransactionId) ->
 	Message=lists:append(["ABORT", "\ntransaction: ", TransactionId, "\n\n", [0]]),
 	gen_tcp:send(Connection,Message),
