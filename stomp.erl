@@ -20,7 +20,7 @@
 -export ([commit_transaction/2]).
 -export ([abort_transaction/2]).
 -export ([on_message/2]).
-
+-export ([on_message_with_conn/2]).
 
 %% Example:	Conn = stomp:connect("localhost", 61613, "", "").
 
@@ -147,6 +147,12 @@ on_message (F, Conn) ->
 	on_message(F, Conn).
 
 
+on_message_with_conn (F, Conn) ->
+	Messages=get_messages(Conn),
+	apply_function_to_messages(F, Messages, Conn),
+	on_message(F, Conn).
+
+
 %% Example: stomp:begin_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
 
 begin_transaction (Connection, TransactionId) ->
@@ -182,6 +188,12 @@ apply_function_to_messages(_, []) ->
 apply_function_to_messages(F, [H|T]) ->
 	F(H),
 	apply_function_to_messages(F, T).
+
+apply_function_to_messages(_, [],_) ->
+	ok;
+apply_function_to_messages(F, [H|T], Conn) ->
+	F(H, Conn),
+	apply_function_to_messages(F, T, Conn).
 
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
 % 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src . . . currently scanning header block multiple times and making unnecessary copies
