@@ -150,7 +150,7 @@ on_message (F, Conn) ->
 on_message_with_conn (F, Conn) ->
 	Messages=get_messages(Conn),
 	apply_function_to_messages(F, Messages, Conn),
-	on_message(F, Conn).
+	on_message_with_conn(F, Conn).
 
 
 %% Example: stomp:begin_transaction(Conn, "MyUniqueTransactionIdBlahBlahBlah1234567890").
