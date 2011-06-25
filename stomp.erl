@@ -7,6 +7,7 @@
 
 -module (stomp).
 -export ([connect/4]). %% "You sunk my scrabbleship!"
+-export ([connect/5]).
 -export ([disconnect/1]).
 -export ([subscribe/2]).
 -export ([subscribe/3]).
@@ -24,9 +25,15 @@
 
 %% Example:	Conn = stomp:connect("localhost", 61613, "", "").
 
+
 connect (Host, PortNo, Login, Passcode)  ->
+    connect(Host, PortNo, Login, Passcode, 1024).
+
+connect (Host, PortNo, Login, Passcode, RecBuf)  ->
+
 	Message=lists:append(["CONNECT", "\nlogin: ", Login, "\npasscode: ", Passcode, "\n\n", [0]]),
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
+        inet:setopts(Sock, [{recbuf,RecBuf}]),
 	gen_tcp:send(Sock,Message),
 	{ok, Response}=gen_tcp:recv(Sock, 0),
 	[{type, Type}, _, _, _]=get_message(Response), %%UGLY!
@@ -135,8 +142,18 @@ get_messages (_, Messages, []) ->
 	Messages;
 get_messages (Connection, Messages, Response) ->
 			[{type, Type}, {headers, Headers}, {body, MessageBody}, TheRest]=get_message(Response),
-			[_|T]=TheRest, %% U.G.L.Y. . . .  you ain't got no alibi.
-			get_messages (Connection, lists:append(Messages, [[{type, Type}, {headers, Headers}, {body, MessageBody}]]), T).
+			
+			get_messages (Connection, lists:append(Messages, [[{type, Type}, {headers, Headers}, {body, MessageBody}]]), get_rest(TheRest)).
+
+%% U.G.L.Y. . . .  you ain't got no alibi.
+%% 6/24/11 I think the rest is when more than one message is retrived at at given time...in any case, looks like large messages are sometimes missing an expected terminationg 0 char?
+%% 6/24/11 ahh...the actual issue is when the message exceeds the read window size, we don't have the entire message...so it looks like it is not terminated beacuse it is not yet terminated
+get_rest(TheRest)->
+    case TheRest of
+	[]->[];
+        [_|T]->T
+    end.
+	       
 
 
 %% Example: MyFunction=fun([_, _, {_, X}]) -> io:fwrite("message ~s ~n", [X]) end, stomp:on_message(MyFunction, Conn).
@@ -198,7 +215,9 @@ apply_function_to_messages(F, [H|T], Conn) ->
 % MESSAGE PARSING  . . . get's a little ugly in here . . . would help if I truly grokked Erlang, I suspect.
 % 7/12/09 - yeah, ugly indeed, i need to make this use the same pattern as get_headers_from_raw_src . . . currently scanning header block multiple times and making unnecessary copies
 get_message(Message) ->
+   
  	[Type, {Headers, MessageBody}, TheRest]=get_type(Message), %% Ugly . . .
+
 	{ParsedHeaders, _}=get_headers_from_raw_src([], Headers),
 	[{type, Type}, {headers, ParsedHeaders}, {body, MessageBody}, TheRest].
 
@@ -208,13 +227,22 @@ get_message(Message) ->
 	
 %% extract message body
 get_message_body ([H|T]) ->
+                %% io:write([H|T]),
+                %% io:fwrite("~n",[]),
+                %% io:write(H),
 		get_message_body ([H|T], []).
 
 get_message_body ([H|T], MessageBody) ->
+             %%io:fwrite("~n",[]),
+             %%io:fwrite("In get msg body/2 ~n",[]),
+             %%io:write([H|T]),
 	case(H) of
 		0 -> {MessageBody, T};
 		_ -> {MyMessageBody, TheRest}=get_message_body(T, MessageBody), {lists:append([MessageBody, [H], MyMessageBody]), TheRest}
-	end.	
+	end;	
+get_message_body ([],[]) ->
+    {[],[]}.
+
 
 
 %% extract headers as a blob of chars, after having iterated over . . .
