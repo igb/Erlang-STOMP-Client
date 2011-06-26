@@ -135,7 +135,7 @@ get_messages (Connection) ->
 	get_messages (Connection, []).
 	
 get_messages (Connection, Messages) ->
-	{ok, Response}=gen_tcp:recv(Connection, 0),
+	Response=do_recv(Connection),
 	get_messages(Connection, Messages, Response).
 		
 get_messages (_, Messages, []) ->
@@ -155,6 +155,19 @@ get_rest(TheRest)->
     end.
 	       
 
+do_recv(Connection)->
+    do_recv(Connection,[]).
+
+do_recv(Connection, [])->
+    {ok, Response}=gen_tcp:recv(Connection, 0),
+    do_recv(Connection, Response);
+do_recv(Connection, Response)->
+    {Status, Data}=gen_tcp:recv(Connection, 0, 1000),
+    case Status of
+	ok->
+	    do_recv(Connection, lists:flatten([Response, Data]));
+	error -> Response
+    end.
 
 %% Example: MyFunction=fun([_, _, {_, X}]) -> io:fwrite("message ~s ~n", [X]) end, stomp:on_message(MyFunction, Conn).
 
