@@ -8,6 +8,7 @@
 -module (stomp).
 -export ([connect/4]). %% "You sunk my scrabbleship!"
 -export ([connect/5]).
+-export ([connect/6]).
 -export ([disconnect/1]).
 -export ([subscribe/2]).
 -export ([subscribe/3]).
@@ -27,11 +28,14 @@
 
 
 connect (Host, PortNo, Login, Passcode)  ->
-    connect(Host, PortNo, Login, Passcode, 1024).
+    connect(Host, PortNo, Login, Passcode, [], 1024).
 
-connect (Host, PortNo, Login, Passcode, RecBuf)  ->
+connect (Host, PortNo, Login, Passcode, Options)  ->
+    connect(Host, PortNo, Login, Passcode, Options, 1024).
 
-	Message=lists:append(["CONNECT", "\nlogin: ", Login, "\npasscode: ", Passcode, "\n\n", [0]]),
+connect (Host, PortNo, Login, Passcode, Options, RecBuf)  ->
+
+	Message=lists:append(["CONNECT", "\nlogin: ", Login, "\npasscode: ", Passcode, concatenate_options(Options), "\n\n", [0]]),
 	{ok,Sock}=gen_tcp:connect(Host,PortNo,[{active, false}]),
         inet:setopts(Sock, [{recbuf,RecBuf}]),
 	gen_tcp:send(Sock,Message),
@@ -55,7 +59,7 @@ subscribe (Destination, Connection) ->
 
 
 subscribe (Destination, Connection, Options) ->
-	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, concatenate_options(Options),"\n\n", [0]]),
+	Message=lists:append(["SUBSCRIBE", "\ndestination: ", Destination, concatenate_options(Options), "\n\n", [0]]),
 	gen_tcp:send(Connection,Message),
 	ok.
 	
