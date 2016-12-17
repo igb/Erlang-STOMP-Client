@@ -6,23 +6,11 @@
 %% Please feel free to use and re-distribute as you see fit. Comments, improvements and questions welcome. 
 
 -module (stomp).
--export ([connect/4]). %% "You sunk my scrabbleship!"
--export ([connect/5]).
--export ([connect/6]).
--export ([disconnect/1]).
--export ([subscribe/2]).
--export ([subscribe/3]).
--export ([unsubscribe/2]).
--export ([get_messages/1]).
--export ([get_message_id/1]).
--export ([ack/2]).
--export ([ack/3]).
--export ([send/4]).
--export ([begin_transaction/2]).
--export ([commit_transaction/2]).
--export ([abort_transaction/2]).
--export ([on_message/2]).
--export ([on_message_with_conn/2]).
+-export ([connect/4, connect/5, connect/6]).
+-export ([disconnect/1, subscribe/2, subscribe/3]).
+-export ([unsubscribe/2, get_messages/1, get_message_id/1, ack/2]).
+-export ([ack/3, send/4, begin_transaction/2, commit_transaction/2]).
+-export ([on_message/2, on_message_with_conn/2]).
 
 %% Example:	Conn = stomp:connect("localhost", 61613, "", "").
 
