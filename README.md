@@ -81,11 +81,8 @@ To contribute, follow these steps:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
 
 ## Acknowledgements
 
 Thank you to the contributors and the community for supporting the project and providing valuable feedback.
-```
-
-Feel free to adjust any section based on your specific needs or any additional information you think should be included. Make sure to add any other specific usage examples or configuration options relevant to your project.
