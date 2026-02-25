@@ -1,7 +1,3 @@
-can you convert this webpage http://www.hccp.org/erlang-stomp-client.html into a README for this github repo https://github.com/igb/Erlang-STOMP-Client?
-
-Sure! Based on the webpage you provided, I can help you create a README template for the GitHub repository. Below is a structured README format you can consider using:
-
 ```markdown
 # Erlang STOMP Client
 
