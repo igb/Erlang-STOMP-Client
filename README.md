@@ -1,4 +1,3 @@
-```markdown
 # Erlang STOMP Client
 
 Erlang STOMP Client is a robust client library for interacting with message brokers that support the STOMP protocol. This client is designed to connect to any STOMP broker and sends/receives messages efficiently while leveraging Erlang's powerful concurrency features.
